@@ -110,7 +110,10 @@ class Configuration
 
     public function getEntity($entity)
     {
-        return $this->_entities[$entity];
+        if (isset($this->_entities[$entity])) {
+            return $this->_entities[$entity];
+        }
+        throw ServerException::entityDoesNotExist();
     }
 
     public function getEntities()
@@ -214,7 +217,7 @@ class Configuration
 
     public function isSecure($entity)
     {
-        if ($this->getEntity($entity)->isSecure()) {
+        if ($entity && $this->getEntity($entity)->isSecure()) {
             return true;
         } else {
             return $this->_username ? true : false;
@@ -223,7 +226,7 @@ class Configuration
 
     public function getUsernameToCheckAgainst($entity)
     {
-        if ($username = $this->getEntity($entity)->getUsername()) {
+        if ($entity && ($username = $this->getEntity($entity)->getUsername())) {
             return $username;
         } else {
             return $this->_username;
@@ -232,7 +235,7 @@ class Configuration
 
     public function getPasswordToCheckAgainst($entity)
     {
-        if ($password = $this->getEntity($entity)->getPassword()) {
+        if ($entity && $password = $this->getEntity($entity)->getPassword()) {
             return $password;
         } else {
             return $this->_password;
