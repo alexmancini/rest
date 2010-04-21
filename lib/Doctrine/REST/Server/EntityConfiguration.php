@@ -39,12 +39,39 @@ class EntityConfiguration
     private $_identifierKey = 'id';
     private $_alias;
     private $_readOnly = false;
+    private $_username;
+    private $_password;
     private $_actions = array();
 
     public function __construct($name, $alias = null)
     {
         $this->_name = $name;
         $this->_alias = $alias;
+    }
+
+    public function isSecure()
+    {
+        return $this->_username ? true : false;
+    }
+
+    public function getUsername()
+    {
+        return $this->_username;
+    }
+
+    public function setUsername($username)
+    {
+        $this->_username = $username;
+    }
+
+    public function getPassword()
+    {
+        return $this->_password;
+    }
+
+    public function setPassword($password)
+    {
+        $this->_password = $password;
     }
 
     public function setIdentifierKey($identifierKey)

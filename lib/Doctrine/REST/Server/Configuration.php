@@ -97,13 +97,13 @@ class Configuration
         }
     }
 
-    public function checkCredentials($username, $password)
+    public function checkCredentials($username, $password, $action, $entity, $id)
     {
-        if ( ! $this->isSecure()) {
+        if ( ! $this->isSecure($entity)) {
             return true;
         }
 
-        if ($this->_username == $username && $this->_password == $password) {
+        if ($this->_getUsernameToCheckAgainst($entity) === $username && $this->_getPasswordToCheckAgainst($entity) === $password) {
             return true;
         } else {
             return false;
@@ -168,9 +168,13 @@ class Configuration
         $this->_credentialsCallback = $callback;
     }
 
-    public function isSecure()
+    public function isSecure($entity)
     {
-        return ($this->_username && $this->_password) ? true : false;
+        if ($this->getEntity($entity)->isSecure()) {
+            return true;
+        } else {
+            return $this->_username ? true : false;
+        }
     }
 
     public function getAuthenticatedUsername()
@@ -211,6 +215,24 @@ class Configuration
     public function setPassword($password)
     {
         $this->_password = $password;
+    }
+
+    public function _getUsernameToCheckAgainst($entity)
+    {
+        if ($username = $this->getEntity($entity)->getUsername()) {
+            return $username;
+        } else {
+            return $this->_username;
+        }
+    }
+
+    public function _getPasswordToCheckAgainst($entity)
+    {
+        if ($password = $this->getEntity($entity)->getPassword()) {
+            return $password;
+        } else {
+            return $this->_password;
+        }
     }
 
     public function getActions()
