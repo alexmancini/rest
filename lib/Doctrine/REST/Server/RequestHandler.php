@@ -38,125 +38,19 @@ class RequestHandler
     private $_source;
     private $_request;
     private $_response;
-    private $_username;
-    private $_password;
-    private $_credentialsCallback;
-    private $_entities = array();
 
-    private $_actions = array(
-        'delete' => 'Doctrine\\REST\\Server\\Action\\DeleteAction',
-        'get' => 'Doctrine\\REST\\Server\\Action\\GetAction',
-        'insert' => 'Doctrine\\REST\\Server\\Action\\InsertAction',
-        'update' => 'Doctrine\\REST\\Server\\Action\\UpdateAction',
-        'list' => 'Doctrine\\REST\\Server\\Action\\ListAction'
-    );
-
-    public function __construct($source, Request $request, Response $response)
+    public function __construct(Configuration $configuration, Request $request, Response $response)
     {
-        $this->_source = $source;
+        $this->_configuration = $configuration;
+        $this->_source = $configuration->getSource();
         $this->_request = $request;
         $this->_response = $response;
         $this->_response->setRequestHandler($this);
-        $this->_credentialsCallback = array($this, 'checkCredentials');
     }
 
-    public function configureEntity($entity, $configuration)
+    public function getConfiguration()
     {
-        $this->_entities[$entity] = $configuration;
-    }
-
-    public function setEntityAlias($entity, $alias)
-    {
-        $this->_entities[$entity]['alias'] = $alias;
-    }
-
-    public function addEntityAction($entity, $action, $className)
-    {
-        $this->_entities[$entity]['actions'][$action] = $className;
-    }
-
-    public function setEntityIdentifierKey($entity, $identifierKey)
-    {
-        $this->_entities[$entity]['identifierKey'] = $identifierKey;
-    }
-
-    public function getEntityIdentifierKey($entity)
-    {
-        return isset($this->_entities[$entity]['identifierKey']) ? $this->_entities[$entity]['identifierKey'] : 'id';
-    }
-
-    public function resolveEntityAlias($alias)
-    {
-        foreach ($this->_entities as $entity => $configuration) {
-            if (isset($configuration['alias']) && $configuration['alias'] === $alias) {
-                return $entity;
-            }
-        }
-        return $alias;
-    }
-
-    public function setCredentialsCallback($callback)
-    {
-        $this->_credentialsCallback = $callback;
-    }
-
-    public function registerAction($action, $className)
-    {
-        $this->_actions[$action] = $className;
-    }
-
-    public function isSecure()
-    {
-        return ($this->_username && $this->_password) ? true : false;
-    }
-
-    public function checkCredentials($username, $password)
-    {
-        if ( ! $this->isSecure()) {
-            return true;
-        }
-
-        if ($this->_username == $username && $this->_password == $password) {
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-    public function hasValidCredentials()
-    {
-        $args = array($_SERVER['PHP_AUTH_USER'], $_SERVER['PHP_AUTH_PW']);
-        return call_user_func_array($this->_credentialsCallback, $args);
-    }
-
-    public function getUsername()
-    {
-        return $this->_username;
-    }
-
-    public function setUsername($username)
-    {
-        $this->_username = $username;
-    }
-
-    public function getPassword()
-    {
-        return $this->_password;
-    }
-
-    public function setPassword($password)
-    {
-        $this->_password = $password;
-    }
-
-    public function getActions()
-    {
-        return $this->_actions;
-    }
-
-    public function getSource()
-    {
-        return $this->_source;
+        return $this->_configuration;
     }
 
     public function getRequest()
@@ -171,14 +65,30 @@ class RequestHandler
 
     public function getEntity()
     {
-        return $this->resolveEntityAlias($this->_request['_entity']);
+        return $this->_configuration->resolveEntityAlias($this->_request['_entity']);
     }
 
     public function execute()
     {
         try {
             $entity = $this->getEntity();
-            $actionInstance = $this->getAction($entity, $this->_request['_action']);
+
+            if ($this->_configuration->getUsername()) {
+                if ( ! $this->_configuration->getAuthenticatedUsername()) {
+                    $this->_configuration->authenticate();
+                    throw ServerException::notAuthorized();
+                } else {
+                    if ( ! $this->_configuration->hasValidCredentials($this->_request['_action'], $entity, $this->_request['_id'])) {
+                        throw ServerException::notAuthorized();
+                    }
+                }
+            }
+
+            $class = $this->_configuration->getAction($entity, $this->_request['_action']);
+            if ( ! $class) {
+                throw ServerException::notFound();
+            }
+            $actionInstance = new $class($this);
 
             if (method_exists($actionInstance, 'execute')) {
                 $result = $actionInstance->execute();
@@ -194,38 +104,9 @@ class RequestHandler
                 $this->_transformResultForResponse($result)
             );
         } catch (\Exception $e) {
-            $this->_response->setError($this->_getExceptionErrorMessage($e));
+            $this->_response->setError($e->getMessage(), $e->getCode());
         }
         return $this->_response;
-    }
-
-    public function getAction($entity, $actionName)
-    {
-        if (isset($this->_actions[$actionName])) {
-            if ( ! is_object($this->_actions[$actionName])) {
-                $actionClassName = $this->_actions[$actionName];
-                $this->_actions[$actionName] = new $actionClassName($this);
-            }
-            return $this->_actions[$actionName];
-        }
-        if (isset($this->_entities[$entity]['actions'][$actionName])) {
-            if ( ! is_object($this->_entities[$entity]['actions'][$actionName])) {
-                $actionClassName = $this->_entities[$entity]['actions'][$actionName];
-                $this->_entities[$entity]['actions'][$actionName] = new $actionClassName($this);
-            }
-            return $this->_entities[$entity]['actions'][$actionName];
-        }
-    }
-
-    private function _getExceptionErrorMessage(\Exception $e)
-    {
-        $message = $e->getMessage();
-
-        if ($e instanceof \PDOException) {
-            $message = preg_replace("/SQLSTATE\[.*\]: (.*)/", "$1", $message);
-        }
-
-        return $message;
     }
 
     private function _transformResultForResponse($result, $array = null)
@@ -238,12 +119,13 @@ class RequestHandler
             if ($this->_source instanceof EntityManager) {
                 $class = $this->_source->getMetadataFactory()->getMetadataFor($entityName);
                 foreach ($class->fieldMappings as $fieldMapping) {
-                    $array[$fieldMapping['fieldName']] = $class->getReflectionProperty($fieldMapping['fieldName'])->getValue($result);
+                    $array[$fieldMapping['fieldName']] = $this->_formatValue($class->getReflectionProperty($fieldMapping['fieldName'])->getValue($result));
                 }
-            } else {
-                $vars = get_object_vars($result);
-                foreach ($vars as $key => $value) {
-                    $array[$key] = $value;
+            }
+            $vars = get_object_vars($result);
+            foreach ($vars as $key => $value) {
+                if ( ! isset($array[$key])) {
+                    $array[$key] = $this->_formatValue($value);
                 }
             }
         } else if (is_array($result)) {
@@ -254,12 +136,27 @@ class RequestHandler
                     }
                     $array[$key] = $this->_transformResultForResponse($value, isset($array[$key]) ? $array[$key] : array());
                 } else {
-                    $array[$key] = $value;
+                    $array[$key] = $this->_formatValue($value);
                 }
             }
-        } else if (is_string($result)) {
-            $array = $result;
         }
         return $array;
+    }
+
+    private function _formatValue($value)
+    {
+        if ($value instanceof \DateTime) {
+            if ($value->getTimestamp()) {
+                return $value->format('c');
+            } else {
+                return;
+            }
+        } else if (($val = strtotime($value)) !== false) {
+            return date('c', $val);
+        } else if ($value === '0000-00-00 00:00:00') {
+            return null;
+        } else {
+            return $value;
+        }
     }
 }

@@ -19,13 +19,10 @@
  * <http://www.doctrine-project.org>.
 */
 
-namespace Doctrine\REST\Server;
-
-use Doctrine\ORM\EntityManager,
-    Doctrine\ORM\Connection;
+namespace Doctrine\REST\Client;
 
 /**
- * Simple REST server facade.
+ * Simple REST ClientException class.
  *
  * @license     http://www.opensource.org/licenses/lgpl-license.php LGPL
  * @link        www.doctrine-project.org
@@ -33,39 +30,10 @@ use Doctrine\ORM\EntityManager,
  * @version     $Revision$
  * @author      Jonathan H. Wage <jonwage@gmail.com>
  */
-class Server
+class ClientException extends \Exception
 {
-    private $_configuration;
-    private $_requestHandler;
-    private $_request;
-    private $_response;
-
-    public function __construct(Configuration $configuration, array $requestData = array())
+    public static function notAuthorized()
     {
-        $this->_configuration = $configuration;
-        $this->_request = new Request($requestData);
-        $this->_response = new Response($this->_request);
-        $this->_requestHandler = new RequestHandler($configuration, $this->_request, $this->_response);
-    }
-
-    public function execute()
-    {
-        $this->_requestHandler->execute();
-        return $this->_requestHandler->getResponse()->getContent();
-    }
-
-    public function getResponse()
-    {
-        return $this->_response;
-    }
-
-    public function getRequest()
-    {
-        return $this->_request;
-    }
-
-    public function getRequestHandler()
-    {
-        return $this->_requestHandler;
+        return new self('Not Authorized', 401);
     }
 }

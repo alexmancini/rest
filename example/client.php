@@ -1,6 +1,8 @@
 <?php
 
-require '/Users/jwage/Sites/doctrine2git/lib/Doctrine/Common/ClassLoader.php';
+$pathToDoctrine = '/Users/jwage/Sites/doctrine2git/lib';
+
+require $pathToDoctrine . '/Doctrine/Common/ClassLoader.php';
 
 use Doctrine\REST\Client\Client,
     Doctrine\REST\Client\EntityConfiguration,
@@ -8,7 +10,7 @@ use Doctrine\REST\Client\Client,
     Doctrine\REST\Client\Entity,
     Doctrine\Common\ClassLoader;
 
-$classLoader = new ClassLoader('Doctrine\REST', __DIR__ . '/lib');
+$classLoader = new ClassLoader('Doctrine\REST', __DIR__ . '/../lib');
 $classLoader->register();
 
 $client = new Client();
@@ -26,13 +28,12 @@ class User extends Entity
 
     public static function configure(EntityConfiguration $entityConfiguration)
     {
-        $entityConfiguration->setUrl('http://localhost/rest/server.php');
+        $entityConfiguration->setUrl('http://localhost/rest/example/server.php');
         $entityConfiguration->setName('user');
+        $entityConfiguration->setUsername('jwage');
+        $entityConfiguration->setPassword('jwage');
     }
 }
 
-$user = User::find(9);
-$user->username = 'teetertertsting';
-$user->password = 'w00t';
-$user->save();
+$user = User::findAll();
 print_r($user);

@@ -19,13 +19,10 @@
  * <http://www.doctrine-project.org>.
 */
 
-namespace Doctrine\REST\Server;
-
-use Doctrine\ORM\EntityManager,
-    Doctrine\ORM\Connection;
+namespace Doctrine\REST\Server\Action;
 
 /**
- * Simple REST server facade.
+ * REST server entities index action.
  *
  * @license     http://www.opensource.org/licenses/lgpl-license.php LGPL
  * @link        www.doctrine-project.org
@@ -33,39 +30,17 @@ use Doctrine\ORM\EntityManager,
  * @version     $Revision$
  * @author      Jonathan H. Wage <jonwage@gmail.com>
  */
-class Server
+class EntitiesAction extends AbstractAction
 {
-    private $_configuration;
-    private $_requestHandler;
-    private $_request;
-    private $_response;
-
-    public function __construct(Configuration $configuration, array $requestData = array())
-    {
-        $this->_configuration = $configuration;
-        $this->_request = new Request($requestData);
-        $this->_response = new Response($this->_request);
-        $this->_requestHandler = new RequestHandler($configuration, $this->_request, $this->_response);
-    }
-
     public function execute()
     {
-        $this->_requestHandler->execute();
-        return $this->_requestHandler->getResponse()->getContent();
-    }
-
-    public function getResponse()
-    {
-        return $this->_response;
-    }
-
-    public function getRequest()
-    {
-        return $this->_request;
-    }
-
-    public function getRequestHandler()
-    {
-        return $this->_requestHandler;
+        $format = $this->_request['_format'];
+        $baseUrl = $this->_getBaseUrl();
+        $resources = array();
+        $count = 0;
+        foreach ($this->_configuration->getEntities() as $key => $entityConfiguration) {
+            $resources['entity' . $count++] = $baseUrl . '/' . $entityConfiguration->getAlias() . '.' . $format;
+        }
+        return $resources;
     }
 }

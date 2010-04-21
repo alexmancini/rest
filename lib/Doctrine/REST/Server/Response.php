@@ -32,9 +32,11 @@ namespace Doctrine\REST\Server;
  */
 class Response
 {
+    private $_configuration;
     private $_requestHandler;
     private $_request;
     private $_responseData;
+    private $_rootNodeName;
 
     public function __construct(Request $request)
     {
@@ -44,17 +46,34 @@ class Response
     public function setRequestHandler(RequestHandler $requestHandler)
     {
         $this->_requestHandler = $requestHandler;
+        $this->_configuration = $requestHandler->getConfiguration();
     }
 
-    public function setError($error)
+    public function setError($error, $code)
     {
         $this->_responseData = array();
-        $this->_responseData['error'] = $error;
+        $this->_responseData['error'] = array('message' => $error, 'code' => $code);
     }
 
     public function setResponseData($responseData)
     {
         $this->_responseData = $responseData;
+    }
+
+    public function setRootNodeName($rootNodeName)
+    {
+        $this->_rootNodeName = $rootNodeName;
+    }
+
+    public function getRootNodeName($data = array())
+    {
+        if (isset($data['error'])) {
+            return 'error';
+        }
+        if ($this->_rootNodeName) {
+            return $this->_rootNodeName;
+        }
+        return $this->_request['_entity'] ? $this->_request['_entity'] : $this->_request['_action'];
     }
 
     public function send()
@@ -78,23 +97,16 @@ class Response
 
             case 'xml':
             default:
-                return $this->_arrayToXml($data, $this->_request['_entity']);
+                $rootNodeName = $this->getRootNodeName($data);
+                if ($rootNodeName === 'error') {
+                    $data = $data['error'];
+                }
+                return $this->_arrayToXml($data, $rootNodeName);
         }
     }
 
     private function _sendHeaders()
     {
-        if ($this->_requestHandler->getUsername()) {
-            if ( ! isset($_SERVER['PHP_AUTH_USER'])) {
-                header('WWW-Authenticate: Basic realm="Doctrine REST API"');
-                header('HTTP/1.0 401 Unauthorized');
-            } else {
-                if ( ! $this->_requestHandler->hasValidCredentials()) {
-                    $this->setError('Invalid credentials specified.');
-                }
-            }
-        }
-
         switch ($this->_request['_format']) {
             case 'php':
                 header('Content-type: text/html;');
@@ -109,12 +121,20 @@ class Response
             default:
                 header('Content-type: application/xml;');
         }
+        
+        if (isset($this->_responseData['error'])) {
+            header($_SERVER['SERVER_PROTOCOL'] . sprintf(' %s %s', $this->_responseData['error']['code'], $this->_responseData['error']['message']));
+        }
     }
 
     private function _arrayToXml($array, $rootNodeName = 'doctrine', $xml = null, $charset = null)
     {
         if ($xml === null) {
-            $xml = new \SimpleXmlElement("<?xml version=\"1.0\" encoding=\"utf-8\"?><$rootNodeName/>");
+            $string = "<?xml version=\"1.0\" encoding=\"utf-8\"?>";
+            if ($rootNodeName) {
+              $string .= "<$rootNodeName/>";
+            }
+            $xml = new \SimpleXmlElement($string);
         }
 
         foreach($array as $key => $value) {
@@ -123,16 +143,22 @@ class Response
             }
             $key = preg_replace('/[^A-Za-z_]/i', '', $key);
 
-            if (is_array($value) && ! empty($value)) {
+            if (isset($key[0]) && $key[0] === '_') {
+                $xml->addAttribute(substr($key, 1), $value);
+            } else if (is_array($value) && ! empty($value)) {
                 $node = $xml->addChild($key);
                 $this->_arrayToXml($value, $rootNodeName, $node, $charset);
-            } else if ($value) {
+            } else {
                 $charset = $charset ? $charset : 'utf-8';
                 if (strcasecmp($charset, 'utf-8') !== 0 && strcasecmp($charset, 'utf8') !== 0) {
                     $value = iconv($charset, 'UTF-8', $value);
                 }
                 $value = htmlspecialchars($value, ENT_COMPAT, 'UTF-8');
-                $xml->addChild($key, $value);
+                if ($value) {
+                    $xml->addChild($key, $value);
+                } else {
+                    $xml->addChild($key);
+                }
             }
         }
 

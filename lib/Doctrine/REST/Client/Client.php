@@ -91,13 +91,14 @@ class Client
         }
 
         $result = curl_exec($ch);
+        $info = curl_getinfo($ch);
 
-        if ( ! $result) {
-            $errorNumber = curl_errno($ch);
-            $error = curl_error($ch);
-            curl_close($ch);
+        if (isset($info['http_code']) && $info['http_code'] === 401) {
+            throw ClientException::notAuthorized();
+        }
 
-            throw new \Exception($errorNumer . ': ' . $error);
+        if ( ! $result || (isset($info['http_code']) && $info['http_code'] !== 200)) {
+            return false;
         }
 
         curl_close($ch);

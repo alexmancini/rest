@@ -37,21 +37,27 @@ class UpdateAction extends AbstractAction
         if ($entity = $this->_findEntityById()) {
             $this->_updateEntityInstance($entity);
             $this->_source->flush();
-        }
 
-        return $entity;
+            return $entity;
+        }
     }
 
     public function executeDBAL()
     {
-        $entity = $this->_getEntity();
-        $identifierKey = $this->_getEntityIdentifierKey($entity);
+        if ($entity = $this->_findEntityById()) {
+            $entityName = $this->_getEntity();
+            $identifierKey = $this->_getEntityIdentifierKey($entityName);
 
-        $data = $this->_gatherData();
-        $this->_source->update($entity, $data, array(
-            $identifierKey => $this->_request['_id']
-        ));
+            $data = $this->_gatherData();
+            $this->_source->update($entityName, $data, array(
+                $identifierKey => $this->_request['_id']
+            ));
 
-        return $this->_findEntityById();
+            foreach ($data as $key => $value) {
+                $entity[$key] = $value;
+            }
+
+            return $entity;
+        }
     }
 }

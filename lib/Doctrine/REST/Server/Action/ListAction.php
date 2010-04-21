@@ -49,6 +49,11 @@ class ListAction extends AbstractAction
         $this->_setQueryFirstAndMax($query);
         $results = $query->execute();
 
+        $identifierKey = $this->_getEntityIdentifierKey();
+        foreach ($results as $key => $result) {
+            $results[$key]->_link = $this->_getBaseUrl() . '/' . $this->_request['_entity'] . '/' . $this->_source->getClassMetadata($entity)->getFieldValue($result, $identifierKey) . '.' . $this->_request['_format'];
+        }
+
         return $results;
     }
 
@@ -68,6 +73,11 @@ class ListAction extends AbstractAction
         }
         $query = $this->_setQueryFirstAndMax($query);
         $results = $this->_source->fetchAll($query, $params);
+
+        $identifierKey = $this->_getEntityIdentifierKey();
+        foreach ($results as $key => $result) {
+            $results[$key]['_link'] = $this->_getBaseUrl() . '/' . $this->_request['_entity'] . '/' . $result[$identifierKey] . '.' . $this->_request['_format'];
+        }
 
         return $results;
     }

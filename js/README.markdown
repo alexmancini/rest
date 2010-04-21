@@ -20,7 +20,6 @@ Now you can get started by defining new entity:
         return 'username=' + this.username + '&password=' + this.password;
       }
     });
-    
 
 You can start creating instances and saving them:
 
@@ -28,6 +27,7 @@ You can start creating instances and saving them:
     user.username = 'jwage';
     user.password = 'password';
 
+    // POST http://localhost/rest/server.php/user.json
     user.save(function (user) {
       alert(user.username + ' saved!');
     });
@@ -40,8 +40,9 @@ You can easily retrieve all the users with findAll():
 
 If you want to retrieve a single User you can use the find() method:
 
-    var user = User.find(1);
-    user.username = 'jon';
-    user.save(function (user) {
-      alert(user.id + ' updated');
+    var user = User.find(1, function(user) {
+      user.username = 'jon';
+      user.save(function (user) {
+        alert(user.id + ' updated');
+      });
     });

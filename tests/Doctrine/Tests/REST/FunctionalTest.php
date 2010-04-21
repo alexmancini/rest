@@ -6,9 +6,11 @@ use Doctrine\ORM\EntityManager,
     Doctrine\REST\Client\Manager,
     Doctrine\REST\Client\Request,
     Doctrine\REST\Client\Entity,
-    Doctrine\REST\Client\EntityConfiguration,
+    Doctrine\REST\Client\EntityConfiguration as ClientEntityConfiguration,
     Doctrine\REST\Client\Client,
-    Doctrine\REST\Server\Server;
+    Doctrine\REST\Server\Server,
+    Doctrine\REST\Server\EntityConfiguration as ServerEntityConfiguration,
+    Doctrine\REST\Server\Configuration;
 
 require_once __DIR__ . '/TestInit.php';
 
@@ -117,10 +119,17 @@ class TestFunctionalClient extends Client
     public function execServer($request, $requestArray, $parameters = array(), $responseType = 'xml')
     {
         $requestArray = array_merge($requestArray, (array) $parameters);
-        $server = new Server($this->source, $requestArray);
+
+        $configuration = new Configuration($this->source);
+
         if ($this->source instanceof EntityManager) {
-            $server->setEntityAlias('Doctrine\Tests\REST\DoctrineUser', 'user');
+            $entityConfiguration = new ServerEntityConfiguration('Doctrine\Tests\REST\DoctrineUser', 'user');
+        } else {
+            $entityConfiguration = new ServerEntityConfiguration('user');
         }
+        $configuration->registerEntity($entityConfiguration);
+        
+        $server = new Server($configuration, $requestArray);
         $response = $server->getRequestHandler()->execute();
         $data = $request->getResponseTransformerImpl()->transform($response->getContent());
         return $data;
@@ -195,7 +204,7 @@ class User extends Entity
     protected $id;
     protected $username;
 
-    public static function configure(EntityConfiguration $entityConfiguration)
+    public static function configure(ClientEntityConfiguration $entityConfiguration)
     {
         $entityConfiguration->setUrl('api');
         $entityConfiguration->setName('user');

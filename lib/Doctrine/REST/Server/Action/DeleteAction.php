@@ -37,6 +37,7 @@ class DeleteAction extends AbstractAction
         if ($entity = $this->_findEntityById()) {
             $this->_source->remove($entity);
             $this->_source->flush();
+
             return $entity;
         }
     }

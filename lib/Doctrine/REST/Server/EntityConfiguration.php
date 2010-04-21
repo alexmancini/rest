@@ -25,7 +25,7 @@ use Doctrine\ORM\EntityManager,
     Doctrine\ORM\Connection;
 
 /**
- * Simple REST server facade.
+ * EntityConfiguration for REST server.
  *
  * @license     http://www.opensource.org/licenses/lgpl-license.php LGPL
  * @link        www.doctrine-project.org
@@ -33,39 +33,61 @@ use Doctrine\ORM\EntityManager,
  * @version     $Revision$
  * @author      Jonathan H. Wage <jonwage@gmail.com>
  */
-class Server
+class EntityConfiguration
 {
-    private $_configuration;
-    private $_requestHandler;
-    private $_request;
-    private $_response;
+    private $_identifierKey = 'id';
+    private $_name;
+    private $_alias;
+    private $_actions = array();
 
-    public function __construct(Configuration $configuration, array $requestData = array())
+    public function __construct($name, $alias = null)
     {
-        $this->_configuration = $configuration;
-        $this->_request = new Request($requestData);
-        $this->_response = new Response($this->_request);
-        $this->_requestHandler = new RequestHandler($configuration, $this->_request, $this->_response);
+        $this->_name = $name;
+        $this->_alias = $alias;
     }
 
-    public function execute()
+    public function setIdentifierKey($identifierKey)
     {
-        $this->_requestHandler->execute();
-        return $this->_requestHandler->getResponse()->getContent();
+        $this->_identifierKey = $identifierKey;
     }
 
-    public function getResponse()
+    public function getIdentifierKey()
     {
-        return $this->_response;
+        return $this->_identifierKey;
     }
 
-    public function getRequest()
+    public function setName($name)
     {
-        return $this->_request;
+        $this->_name = $name;
     }
 
-    public function getRequestHandler()
+    public function getName()
     {
-        return $this->_requestHandler;
+        return $this->_name;
+    }
+
+    public function setAlias($alias)
+    {
+        $this->_alias = $alias;
+    }
+
+    public function getAlias()
+    {
+        return $this->_alias ? $this->_alias : $this->_name;
+    }
+
+    public function registerAction($action, $className)
+    {
+        $this->_actions[$action] = $className;
+    }
+
+    public function hasAction($action)
+    {
+        return isset($this->_actions[$action]) ? true : false;
+    }
+
+    public function getAction($action)
+    {
+        return $this->_actions[$action];
     }
 }

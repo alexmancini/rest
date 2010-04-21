@@ -120,7 +120,6 @@ class Manager
                 }
                 return $collection;
             } else if ($result) {
-                
                 if (is_object($entity))
                 {
                     $instance = $entity;
@@ -140,9 +139,8 @@ class Manager
                 }
                 return $instance;
             }
-        } else {
-            return array();
         }
+        return false;
     }
 
     private function _hydrate($configuration, $instance, $data)

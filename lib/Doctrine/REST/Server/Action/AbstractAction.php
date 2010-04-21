@@ -22,7 +22,8 @@
 namespace Doctrine\REST\Server\Action;
 
 use Doctrine\REST\Server\RequestHandler,
-    Doctrine\ORM\EntityManager;
+    Doctrine\ORM\EntityManager,
+    Doctrine\REST\Server\ServerException;
 
 /**
  * Abstract server action class for REST server actions to extend from.
@@ -36,14 +37,23 @@ use Doctrine\REST\Server\RequestHandler,
 abstract class AbstractAction
 {
     protected $_requestHandler;
+    protected $_configuration;
     protected $_source;
     protected $_request;
 
     public function __construct(RequestHandler $requestHandler)
     {
         $this->_requestHandler = $requestHandler;
-        $this->_source = $requestHandler->getSource();
+        $this->_configuration = $requestHandler->getConfiguration();
+        $this->_source = $this->_configuration->getSource();
         $this->_request = $requestHandler->getRequest();
+        $this->_response = $requestHandler->getResponse();
+    }
+
+    public function getName()
+    {
+        $reflection = new \ReflectionClass($this);
+        return strtolower(substr($reflection->getShortName(), 0, -6));
     }
 
     public function executeORM()
@@ -54,6 +64,11 @@ abstract class AbstractAction
     {
     }
 
+    protected function _getBaseUrl()
+    {
+        return $this->_configuration->getBaseUrl();
+    }
+
     protected function _getEntity()
     {
         return $this->_requestHandler->getEntity();
@@ -61,7 +76,12 @@ abstract class AbstractAction
 
     protected function _getEntityIdentifierKey()
     {
-        return $this->_requestHandler->getEntityIdentifierKey($this->_getEntity());
+        return $this->_configuration->getEntityIdentifierKey($this->_getEntity());
+    }
+
+    protected function _setRootNodeName($rootNodeName)
+    {
+        $this->_response->setRootNodeName($rootNodeName);
     }
 
     protected function _setQueryFirstAndMax($q)
@@ -106,15 +126,23 @@ abstract class AbstractAction
                 ->setParameter('1', $id);
             $query = $qb->getQuery();
 
-            return $query->getSingleResult();
+            try {
+                $result = $query->getSingleResult();
+            } catch (\Exception $e) {
+                throw ServerException::notFound();
+            }
         } else {
             $entity = $this->_getEntity();
             $identifierKey = $this->_getEntityIdentifierKey($entity);
 
             $query = sprintf('SELECT * FROM %s WHERE %s = ?', $entity, $identifierKey);
 
-            return $this->_source->fetchRow($query, array($this->_request['_id']));
+            $result = $this->_source->fetchRow($query, array($this->_request['_id']));
         }
+        if ( ! $result) {
+            throw ServerException::notFound();
+        }
+        return $result;
     }
 
     protected function _updateEntityInstance($entity)
