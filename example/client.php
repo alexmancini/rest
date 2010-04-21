@@ -35,5 +35,8 @@ class User extends Entity
     }
 }
 
-$user = User::findAll();
+$user = User::find(43);
+$user->username = 'testing';
+$user->save();
+
 print_r($user);

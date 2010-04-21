@@ -136,6 +136,11 @@ class Configuration
         return $this->_entities;
     }
 
+    public function getEntity($entity)
+    {
+        return $this->_entities[$entity];
+    }
+
     public function registerEntity(EntityConfiguration $entityConfiguration)
     {
         $this->_entities[$entityConfiguration->getName()] = $entityConfiguration;

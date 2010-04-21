@@ -93,8 +93,11 @@ class Client
         $result = curl_exec($ch);
         $info = curl_getinfo($ch);
 
-        if (isset($info['http_code']) && $info['http_code'] === 401) {
-            throw ClientException::notAuthorized();
+        $fatalCodes = array(401, 500);
+        if (isset($info['http_code']) && in_array($info['http_code'], $fatalCodes)) {
+            throw ClientException::requestError(
+                $request->getResponseTransformerImpl()->transform($result)
+            );
         }
 
         if ( ! $result || (isset($info['http_code']) && $info['http_code'] !== 200)) {

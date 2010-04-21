@@ -64,6 +64,13 @@ abstract class AbstractAction
     {
     }
 
+    protected function _enforceReadOnly()
+    {
+        if ($this->_configuration->getEntity($this->_getEntity())->isReadOnly()) {
+            throw ServerException::readOnly();
+        }
+    }
+
     protected function _getBaseUrl()
     {
         return $this->_configuration->getBaseUrl();

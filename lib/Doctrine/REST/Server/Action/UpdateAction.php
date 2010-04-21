@@ -34,6 +34,8 @@ class UpdateAction extends AbstractAction
 {
     public function executeORM()
     {
+        $this->_enforceReadOnly();
+
         if ($entity = $this->_findEntityById()) {
             $this->_updateEntityInstance($entity);
             $this->_source->flush();
@@ -44,6 +46,8 @@ class UpdateAction extends AbstractAction
 
     public function executeDBAL()
     {
+        $this->_enforceReadOnly();
+
         if ($entity = $this->_findEntityById()) {
             $entityName = $this->_getEntity();
             $identifierKey = $this->_getEntityIdentifierKey($entityName);

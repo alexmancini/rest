@@ -35,9 +35,10 @@ use Doctrine\ORM\EntityManager,
  */
 class EntityConfiguration
 {
-    private $_identifierKey = 'id';
     private $_name;
+    private $_identifierKey = 'id';
     private $_alias;
+    private $_readOnly = false;
     private $_actions = array();
 
     public function __construct($name, $alias = null)
@@ -74,6 +75,14 @@ class EntityConfiguration
     public function getAlias()
     {
         return $this->_alias ? $this->_alias : $this->_name;
+    }
+
+    public function isReadOnly($bool = null)
+    {
+        if ($bool !== null) {
+            $this->_readOnly = $bool;
+        }
+        return $this->_readOnly;
     }
 
     public function registerAction($action, $className)

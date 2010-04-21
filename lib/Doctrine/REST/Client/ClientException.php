@@ -32,8 +32,8 @@ namespace Doctrine\REST\Client;
  */
 class ClientException extends \Exception
 {
-    public static function notAuthorized()
+    public static function requestError($error)
     {
-        return new self('Not Authorized', 401);
+        return new self($error['message'], $error['code']);
     }
 }

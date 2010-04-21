@@ -34,6 +34,8 @@ class DeleteAction extends AbstractAction
 {
     public function executeORM()
     {
+        $this->_enforceReadOnly();
+
         if ($entity = $this->_findEntityById()) {
             $this->_source->remove($entity);
             $this->_source->flush();
@@ -44,6 +46,8 @@ class DeleteAction extends AbstractAction
 
     public function executeDBAL()
     {
+        $this->_enforceReadOnly();
+
         if ($entity = $this->_findEntityById()) {
             $this->_source->delete($this->_getEntity(), array(
                 $this->_getEntityIdentifierKey() => $this->_request['_id']

@@ -34,6 +34,8 @@ class InsertAction extends AbstractAction
 {
     public function executeORM()
     {
+        $this->_enforceReadOnly();
+
         $entity = $this->_getEntity();
 
         $instance = new $entity();
@@ -46,6 +48,8 @@ class InsertAction extends AbstractAction
 
     public function executeDBAL()
     {
+        $this->_enforceReadOnly();
+
         $entity = $this->_getEntity();
         $identifierKey = $this->_getEntityIdentifierKey();
 

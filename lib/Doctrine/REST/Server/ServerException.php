@@ -32,10 +32,16 @@ namespace Doctrine\REST\Server;
  */
 class ServerException extends \Exception
 {
+    public static function readOnly()
+    {
+        return new self('Read Only', 401);
+    }
+
     public static function notAuthorized()
     {
-        return new self('Not authorized', 401);
+        return new self('Not Authorized', 401);
     }
+
     public static function notFound()
     {
         return new self('Not Found', 404);

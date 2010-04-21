@@ -46,6 +46,7 @@ $configuration->setPassword('jwage');
 
 $userConfiguration = new \Doctrine\REST\Server\EntityConfiguration('user');
 $userConfiguration->setIdentifierKey('id');
+$userConfiguration->isReadOnly(false);
 
 $configuration->registerEntity($userConfiguration);
 
