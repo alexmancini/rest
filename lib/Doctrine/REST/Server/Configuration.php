@@ -35,10 +35,10 @@ use Doctrine\ORM\EntityManager,
  */
 class Configuration
 {
-    private $_name = 'Doctrine REST API';
     private $_source;
-    private $_entities = array();
+    private $_name = 'Doctrine REST API';
     private $_baseUrl;
+    private $_entities = array();
     private $_username;
     private $_password;
     private $_authenticatedUsername;
@@ -57,19 +57,30 @@ class Configuration
     public function __construct($source)
     {
         $this->_source = $source;
-        $this->_credentialsCallback = array($this, 'checkCredentials');
-        $this->_authenticationCallback = array($this, 'httpAuthenticate');
+
+        $configuration = $this;
+        $this->_credentialsCallback = function ($username, $password, $action, $entity, $id) use ($configuration) {
+            if ( ! $configuration->isSecure($entity)) {
+                return true;
+            }
+
+            $usernameToCheckAgainst = $configuration->getUsernameToCheckAgainst($entity);
+            $passwordToCheckAgainst = $configuration->getPasswordToCheckAgainst($entity);
+            if ($usernameToCheckAgainst === $username && $passwordToCheckAgainst === $password) {
+                return true;
+            } else {
+                return false;
+            }
+        };
+        $this->_authenticationCallback = function () use ($configuration) {
+            header('WWW-Authenticate: Basic realm="' . $configuration->getName() . '"');
+            header('HTTP/1.0 401 Unauthorized');  
+        };
     }
 
-    public function authenticate()
+    public function getSource()
     {
-        return call_user_func_array($this->_authenticationCallback, array($this));
-    }
-
-    public function httpAuthenticate()
-    {
-        header('WWW-Authenticate: Basic realm="' . $this->getName() . '"');
-        header('HTTP/1.0 401 Unauthorized');
+        return $this->_source;
     }
 
     public function setName($name)
@@ -82,45 +93,6 @@ class Configuration
         return $this->_name;
     }
 
-    public function registerAction($action, $className)
-    {
-        $this->_actions[$action] = $className;
-    }
-
-    public function getAction($entity, $action)
-    {
-        if (isset($this->_actions[$action])) {
-            return $this->_actions[$action];
-        }
-        if (isset($this->_entities[$entity]) && $this->_entities[$entity]->hasAction($action)) {
-            return $this->_entities[$entity]->getAction($action);
-        }
-    }
-
-    public function checkCredentials($username, $password, $action, $entity, $id)
-    {
-        if ( ! $this->isSecure($entity)) {
-            return true;
-        }
-
-        if ($this->_getUsernameToCheckAgainst($entity) === $username && $this->_getPasswordToCheckAgainst($entity) === $password) {
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-    public function hasValidCredentials($action, $entity, $id)
-    {
-        $args = array($this->_authenticatedUsername, $this->_authenticatedPassword, $action, $entity, $id);
-        return call_user_func_array($this->_credentialsCallback, $args);
-    }
-
-    public function configureEntity($entity, $configuration)
-    {
-        $this->_entities[$entity] = $configuration;
-    }
-
     public function setBaseUrl($baseUrl)
     {
         $this->_baseUrl = $baseUrl;
@@ -131,9 +103,9 @@ class Configuration
         return $this->_baseUrl;
     }
 
-    public function getEntities()
+    public function registerEntity(EntityConfiguration $entityConfiguration)
     {
-        return $this->_entities;
+        $this->_entities[$entityConfiguration->getName()] = $entityConfiguration;
     }
 
     public function getEntity($entity)
@@ -141,40 +113,9 @@ class Configuration
         return $this->_entities[$entity];
     }
 
-    public function registerEntity(EntityConfiguration $entityConfiguration)
+    public function getEntities()
     {
-        $this->_entities[$entityConfiguration->getName()] = $entityConfiguration;
-    }
-
-    public function getEntityIdentifierKey($entity)
-    {
-        return $this->_entities[$entity]->getIdentifierKey();
-    }
-
-    public function resolveEntityAlias($alias)
-    {
-        if ($alias) {
-            foreach ($this->_entities as $entityConfiguration) {
-                if ($entityConfiguration->getAlias() === $alias) {
-                    return $entityConfiguration->getName();
-                }
-            }
-            throw ServerException::notFound();
-        }
-    }
-
-    public function setCredentialsCallback($callback)
-    {
-        $this->_credentialsCallback = $callback;
-    }
-
-    public function isSecure($entity)
-    {
-        if ($this->getEntity($entity)->isSecure()) {
-            return true;
-        } else {
-            return $this->_username ? true : false;
-        }
+        return $this->_entities;
     }
 
     public function getAuthenticatedUsername()
@@ -217,7 +158,70 @@ class Configuration
         $this->_password = $password;
     }
 
-    public function _getUsernameToCheckAgainst($entity)
+    public function setCredentialsCallback($callback)
+    {
+        $this->_credentialsCallback = $callback;
+    }
+
+    public function setAuthenticationCallback($callback)
+    {
+        $this->_authenticationCallback = $callback;
+    }
+
+    public function registerAction($action, $className)
+    {
+        $this->_actions[$action] = $className;
+    }
+
+    public function getAction($entity, $action)
+    {
+        if (isset($this->_actions[$action])) {
+            return $this->_actions[$action];
+        }
+        if (isset($this->_entities[$entity]) && $this->_entities[$entity]->hasAction($action)) {
+            return $this->_entities[$entity]->getAction($action);
+        }
+        throw ServerException::actionDoesNotExist();
+    }
+
+    public function sendAuthentication()
+    {
+        return call_user_func_array($this->_authenticationCallback, array($this));
+    }
+
+    public function hasValidCredentials($action, $entity, $id)
+    {
+        $args = array($this->_authenticatedUsername, $this->_authenticatedPassword, $action, $entity, $id);
+        return call_user_func_array($this->_credentialsCallback, $args);
+    }
+
+    public function getEntityIdentifierKey($entity)
+    {
+        return $this->_entities[$entity]->getIdentifierKey();
+    }
+
+    public function resolveEntityAlias($alias)
+    {
+        if ($alias) {
+            foreach ($this->_entities as $entityConfiguration) {
+                if ($entityConfiguration->getAlias() === $alias) {
+                    return $entityConfiguration->getName();
+                }
+            }
+            throw ServerException::notFound();
+        }
+    }
+
+    public function isSecure($entity)
+    {
+        if ($this->getEntity($entity)->isSecure()) {
+            return true;
+        } else {
+            return $this->_username ? true : false;
+        }
+    }
+
+    public function getUsernameToCheckAgainst($entity)
     {
         if ($username = $this->getEntity($entity)->getUsername()) {
             return $username;
@@ -226,22 +230,12 @@ class Configuration
         }
     }
 
-    public function _getPasswordToCheckAgainst($entity)
+    public function getPasswordToCheckAgainst($entity)
     {
         if ($password = $this->getEntity($entity)->getPassword()) {
             return $password;
         } else {
             return $this->_password;
         }
-    }
-
-    public function getActions()
-    {
-        return $this->_actions;
-    }
-
-    public function getSource()
-    {
-        return $this->_source;
     }
 }

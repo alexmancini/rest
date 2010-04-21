@@ -75,7 +75,7 @@ class RequestHandler
 
             if ($this->_configuration->getUsername()) {
                 if ( ! $this->_configuration->getAuthenticatedUsername()) {
-                    $this->_configuration->authenticate();
+                    $this->_configuration->sendAuthentication();
                     throw ServerException::notAuthorized();
                 } else {
                     if ( ! $this->_configuration->hasValidCredentials($this->_request['_action'], $entity, $this->_request['_id'])) {

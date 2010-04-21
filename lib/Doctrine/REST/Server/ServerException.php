@@ -32,6 +32,11 @@ namespace Doctrine\REST\Server;
  */
 class ServerException extends \Exception
 {
+    public static function actionDoesNotExist()
+    {
+        return new self('Action does not exist');
+    }
+
     public static function readOnly()
     {
         return new self('Read Only', 401);

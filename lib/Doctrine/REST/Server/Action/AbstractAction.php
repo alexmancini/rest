@@ -40,6 +40,7 @@ abstract class AbstractAction
     protected $_configuration;
     protected $_source;
     protected $_request;
+    protected $_response;
 
     public function __construct(RequestHandler $requestHandler)
     {
@@ -48,12 +49,6 @@ abstract class AbstractAction
         $this->_source = $this->_configuration->getSource();
         $this->_request = $requestHandler->getRequest();
         $this->_response = $requestHandler->getResponse();
-    }
-
-    public function getName()
-    {
-        $reflection = new \ReflectionClass($this);
-        return strtolower(substr($reflection->getShortName(), 0, -6));
     }
 
     public function executeORM()
