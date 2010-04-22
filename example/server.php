@@ -44,7 +44,7 @@ $configuration->setPassword('jwage');
 //    return true;
 //});
 
-$userConfiguration = new \Doctrine\REST\Server\EntityConfiguration('user');
+$userConfiguration = new \Doctrine\REST\Server\EntityConfiguration('user', 'users', 'user', 'users');
 $userConfiguration->setIdentifierKey('id');
 $userConfiguration->isReadOnly(false);
 $userConfiguration->setUsername('jwage');

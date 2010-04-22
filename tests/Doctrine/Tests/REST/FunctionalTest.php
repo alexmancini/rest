@@ -125,9 +125,10 @@ class TestFunctionalClient extends Client
         if ($this->source instanceof EntityManager) {
             $entityConfiguration = new ServerEntityConfiguration('Doctrine\Tests\REST\DoctrineUser', 'user');
         } else {
-            $entityConfiguration = new ServerEntityConfiguration('user');
+            $entityConfiguration = new ServerEntityConfiguration('user', 'user');
         }
         $configuration->registerEntity($entityConfiguration);
+        $configuration->setBaseUrl('http://localhost/server.php');
         
         $server = new Server($configuration, $requestArray);
         $response = $server->getRequestHandler()->execute();

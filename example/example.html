@@ -4,7 +4,7 @@
         <title>jAct demo</title>
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
         <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.js"></script>
-        <script src="jActiveResource.js"></script>
+        <script src="../js/jActiveResource.js"></script>
         
         <script>
         function loadEditForm(id) {
@@ -17,7 +17,7 @@
 
         $(function() {
           jActiveResource.define('User', {
-            url: 'http://localhost/rest/example/server.php/user',
+            url: 'http://localhost/rest/example/server.php/users',
 
             username: null,
             password: null,

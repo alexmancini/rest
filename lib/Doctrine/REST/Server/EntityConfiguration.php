@@ -36,17 +36,27 @@ use Doctrine\ORM\EntityManager,
 class EntityConfiguration
 {
     private $_name;
-    private $_identifierKey = 'id';
     private $_alias;
+    private $_singular;
+    private $_plural;
+    private $_identifierKey = 'id';
     private $_readOnly = false;
     private $_username;
     private $_password;
     private $_actions = array();
 
-    public function __construct($name, $alias = null)
+    public function __construct($name, $alias, $singular = null, $plural = null)
     {
+        if ($singular === null) {
+            $singular = $alias;
+        }
+        if ($plural === null) {
+            $plural = $alias;
+        }
         $this->_name = $name;
         $this->_alias = $alias;
+        $this->_singular = $singular;
+        $this->_plural = $plural;
     }
 
     public function isSecure()
@@ -94,14 +104,19 @@ class EntityConfiguration
         return $this->_name;
     }
 
-    public function setAlias($alias)
-    {
-        $this->_alias = $alias;
-    }
-
     public function getAlias()
     {
-        return $this->_alias ? $this->_alias : $this->_name;
+        return $this->_alias;
+    }
+
+    public function getSingular()
+    {
+        return $this->_singular;
+    }
+
+    public function getPlural()
+    {
+        return $this->_plural;
     }
 
     public function isReadOnly($bool = null)

@@ -65,17 +65,6 @@ class Response
         $this->_rootNodeName = $rootNodeName;
     }
 
-    public function getRootNodeName($data = array())
-    {
-        if (isset($data['error'])) {
-            return 'error';
-        }
-        if ($this->_rootNodeName) {
-            return $this->_rootNodeName;
-        }
-        return $this->_request['_entity'] ? $this->_request['_entity'] : $this->_request['_action'];
-    }
-
     public function send()
     {
         $this->_sendHeaders();
@@ -97,11 +86,29 @@ class Response
 
             case 'xml':
             default:
-                $rootNodeName = $this->getRootNodeName($data);
-                if ($rootNodeName === 'error') {
+                if (isset($data['error'])) {
+                    $pluralName = 'error';
+                } else if ($this->_rootNodeName) {
+                    $pluralName =  $this->_rootNodeName;
+                } else if ($entity = $this->_requestHandler->getEntity()) {
+                    $configuration = $this->_configuration->getEntity($entity);
+                    $pluralName = $configuration->getPlural();
+                } else {
+                    $pluralName = $this->_request['_action'];
+                }
+                if (isset($configuration) && $configuration) {
+                    $singularName = $configuration->getSingular();
+                } else {
+                    $singularName = $pluralName;
+                }
+                if ($pluralName === 'error') {
                     $data = $data['error'];
                 }
-                return $this->_arrayToXml($data, $rootNodeName);
+                $count = count($data, true) - count($data);
+                if ($count === 0) {
+                    $pluralName = $singularName;
+                }
+                return $this->_arrayToXml($data, $pluralName, $singularName);
         }
     }
 
@@ -127,19 +134,19 @@ class Response
         }
     }
 
-    private function _arrayToXml($array, $rootNodeName = 'doctrine', $xml = null, $charset = null)
+    private function _arrayToXml($array, $pluralName = 'doctrine', $singularName = 'doctrine', $xml = null, $charset = null)
     {
         if ($xml === null) {
             $string = "<?xml version=\"1.0\" encoding=\"utf-8\"?>";
-            if ($rootNodeName) {
-              $string .= "<$rootNodeName/>";
+            if ($pluralName) {
+              $string .= "<$pluralName/>";
             }
             $xml = new \SimpleXmlElement($string);
         }
 
         foreach($array as $key => $value) {
             if (is_numeric($key)) {
-                $key = $rootNodeName . $key;
+                $key = $singularName . $key;
             }
             $key = preg_replace('/[^A-Za-z_]/i', '', $key);
 
@@ -147,7 +154,7 @@ class Response
                 $xml->addAttribute(substr($key, 1), $value);
             } else if (is_array($value) && ! empty($value)) {
                 $node = $xml->addChild($key);
-                $this->_arrayToXml($value, $rootNodeName, $node, $charset);
+                $this->_arrayToXml($value, $pluralName, $singularName, $node, $charset);
             } else {
                 $charset = $charset ? $charset : 'utf-8';
                 if (strcasecmp($charset, 'utf-8') !== 0 && strcasecmp($charset, 'utf8') !== 0) {

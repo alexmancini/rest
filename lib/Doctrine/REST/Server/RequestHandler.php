@@ -71,34 +71,9 @@ class RequestHandler
     public function execute()
     {
         try {
-            $entity = $this->getEntity();
+            $this->_checkSecurity();
 
-            if ($this->_configuration->getUsername()) {
-                if ( ! $this->_configuration->getAuthenticatedUsername()) {
-                    $this->_configuration->sendAuthentication();
-                    throw ServerException::notAuthorized();
-                } else {
-                    if ( ! $this->_configuration->hasValidCredentials($this->_request['_action'], $entity, $this->_request['_id'])) {
-                        throw ServerException::notAuthorized();
-                    }
-                }
-            }
-
-            $class = $this->_configuration->getAction($entity, $this->_request['_action']);
-            if ( ! $class) {
-                throw ServerException::notFound();
-            }
-            $actionInstance = new $class($this);
-
-            if (method_exists($actionInstance, 'execute')) {
-                $result = $actionInstance->execute();
-            } else {
-                if ($this->_source instanceof EntityManager) {
-                    $result = $actionInstance->executeORM();
-                } else {
-                    $result = $actionInstance->executeDBAL();
-                }
-            }
+            $result = $this->_execute();
 
             $this->_response->setResponseData(
                 $this->_transformResultForResponse($result)
@@ -107,6 +82,40 @@ class RequestHandler
             $this->_response->setError($e->getMessage(), $e->getCode());
         }
         return $this->_response;
+    }
+
+    private function _execute()
+    {
+        $class = $this->_configuration->getAction($this->getEntity(), $this->_request['_action']);
+        if ( ! $class) {
+            throw ServerException::notFound();
+        }
+        $actionInstance = new $class($this);
+
+        if (method_exists($actionInstance, 'execute')) {
+            $result = $actionInstance->execute();
+        } else {
+            if ($this->_source instanceof EntityManager) {
+                $result = $actionInstance->executeORM();
+            } else {
+                $result = $actionInstance->executeDBAL();
+            }
+        }
+        return $result;
+    }
+
+    private function _checkSecurity()
+    {
+        if ($this->_configuration->getUsername()) {
+            if ( ! $this->_configuration->getAuthenticatedUsername()) {
+                $this->_configuration->sendAuthentication();
+                throw ServerException::notAuthorized();
+            } else {
+                if ( ! $this->_configuration->hasValidCredentials($this->_request['_action'], $this->getEntity(), $this->_request['_id'])) {
+                    throw ServerException::notAuthorized();
+                }
+            }
+        }
     }
 
     private function _transformResultForResponse($result, $array = null)
