@@ -106,7 +106,7 @@ class RequestHandler
 
     private function _checkSecurity()
     {
-        if ($this->_configuration->getUsername()) {
+        if ($this->_configuration->isSecure($this->getEntity())) {
             if ( ! $this->_configuration->getAuthenticatedUsername()) {
                 $this->_configuration->sendAuthentication();
                 throw ServerException::notAuthorized();
@@ -140,9 +140,6 @@ class RequestHandler
         } else if (is_array($result)) {
             foreach ($result as $key => $value) {
                 if (is_object($value) || is_array($value)) {
-                    if (is_object($value)) {
-                        $key = $this->_request['_entity'] . $key;
-                    }
                     $array[$key] = $this->_transformResultForResponse($value, isset($array[$key]) ? $array[$key] : array());
                 } else {
                     $array[$key] = $this->_formatValue($value);

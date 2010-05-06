@@ -43,6 +43,7 @@ class EntityConfiguration
     private $_readOnly = false;
     private $_username;
     private $_password;
+    private $_isSecure = true;
     private $_actions = array();
 
     public function __construct($name, $alias, $singular = null, $plural = null)
@@ -61,7 +62,7 @@ class EntityConfiguration
 
     public function isSecure()
     {
-        return $this->_username ? true : false;
+        return $this->_isSecure;
     }
 
     public function getUsername()

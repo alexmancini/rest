@@ -46,7 +46,8 @@ class PHPRequestParser
         $entity = $e[0];
         $id = isset($e[1]) ? $e[1] : null;
         $action = isset($e[2]) ? $e[2] : null;
-        $method = isset($_REQUEST['_method']) ? $_REQUEST['_method'] : $_SERVER['REQUEST_METHOD'];
+        $method = isset($_SERVER['REQUEST_METHOD']) ? $_SERVER['REQUEST_METHOD'] : 'GET';
+        $method = isset($_REQUEST['_method']) ? $_REQUEST['_method'] : $method;
         $method = strtoupper($method);
 
         if ($count === 1) {

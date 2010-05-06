@@ -45,6 +45,7 @@ class Configuration
     private $_authenticatedPassword;
     private $_credentialsCallback;
     private $_authenticationCallback;
+    private $_isSecure = true;
     private $_actions = array(
         'entities' => 'Doctrine\\REST\\Server\\Action\\EntitiesAction',
         'delete' => 'Doctrine\\REST\\Server\\Action\\DeleteAction',
@@ -72,10 +73,13 @@ class Configuration
                 return false;
             }
         };
-        $this->_authenticationCallback = function () use ($configuration) {
-            header('WWW-Authenticate: Basic realm="' . $configuration->getName() . '"');
-            header('HTTP/1.0 401 Unauthorized');  
-        };
+        $this->_authenticationCallback = array($this, 'defaultAuthenticationCallback');
+    }
+
+    public function defaultAuthenticationCallback(Configuration $configuration)
+    {
+      header('WWW-Authenticate: Basic realm="' . $configuration->getName() . '"');
+      header('HTTP/1.0 401 Unauthorized');
     }
 
     public function getSource()
@@ -217,11 +221,16 @@ class Configuration
 
     public function isSecure($entity)
     {
-        if ($entity && $this->getEntity($entity)->isSecure()) {
-            return true;
+        if ($entity) {
+            return $this->getEntity($entity)->isSecure();
         } else {
-            return $this->_username ? true : false;
+            return $this->_isSecure;
         }
+    }
+
+    public function setIsSecure($bool)
+    {
+      $this->_isSecure = $bool;
     }
 
     public function getUsernameToCheckAgainst($entity)
