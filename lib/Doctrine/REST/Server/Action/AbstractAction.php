@@ -23,7 +23,8 @@ namespace Doctrine\REST\Server\Action;
 
 use Doctrine\REST\Server\RequestHandler,
     Doctrine\ORM\EntityManager,
-    Doctrine\REST\Server\ServerException;
+    Doctrine\REST\Server\ServerException,
+    Doctrine\DBAL\Types\Type;
 
 /**
  * Abstract server action class for REST server actions to extend from.
@@ -161,13 +162,26 @@ abstract class AbstractAction
 
     protected function _gatherData()
     {
-        $data = array();
+        $cmf        = $this->_source->getMetadataFactory();
+        $conn       = $this->_source->getConnection();
+        $data       = array();
+        $metadata   = $cmf->getMetadataFor($this->_getEntity());
+        $platform   = $conn->getDatabasePlatform();
+
         foreach ($this->_request->getData() as $key => $value) {
             if ($key[0] == '_') {
                 continue;
             }
-            $data[$key] = $value;
+
+            $typeName = $metadata->getTypeOfField($key);
+            if (Type::hasType($typeName)) {
+                $type = Type::getType($typeName);
+                $data[$key] = $type->convertToPhpValue($value, $platform);
+            } else {
+                $data[$key] = $value;
+            }
         }
+
         return $data;
     }
 }

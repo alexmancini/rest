@@ -21,6 +21,8 @@
 
 namespace Doctrine\REST\Server;
 
+use Doctrine\DBAL\Types\Type;
+
 /**
  * Class that represents a REST server response.
  *
@@ -144,6 +146,10 @@ class Response
             $xml = new \SimpleXmlElement($string);
         }
 
+        $source     = $this->_requestHandler->getConfiguration()->getSource();
+        $conn       = $source->getConnection();
+        $platform   = $conn->getDatabasePlatform();
+
         foreach($array as $key => $value) {
             if (is_numeric($key)) {
                 $key = $singularName . $key;
@@ -155,6 +161,14 @@ class Response
             } else if (is_array($value) && ! empty($value)) {
                 $node = $xml->addChild($key);
                 $this->_arrayToXml($value, $pluralName, $singularName, $node, $charset);
+            } else if (is_object($value)) {
+                $typeName = strtolower(get_class($value));
+
+                if (Type::hasType($typeName)) {
+                    $type = Type::getType($typeName);
+                    $value = $type->convertToDatabaseValue($value, $platform);
+                    $xml->addChild($key, $value);
+                }
             } else {
                 $charset = $charset ? $charset : 'utf-8';
                 if (strcasecmp($charset, 'utf-8') !== 0 && strcasecmp($charset, 'utf8') !== 0) {
